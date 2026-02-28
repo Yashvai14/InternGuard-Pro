@@ -3,13 +3,13 @@ import "./globals.css";
 
 export const metadata: Metadata = {
   title: {
-    default: "Your App Name",
-    template: "%s | Your App Name",
+    default: "InternGuard - Fake Internship Detector",
+    template: "%s | InternGuard",
   },
-  description: "Your app description here",
-  keywords: ["Next.js", "App Router", "Your App"],
-  authors: [{ name: "Your Name" }],
-  creator: "Your Name",
+  description: "AI-powered fake internship and job post detection system for students",
+  keywords: ["fake internship", "scam detection", "job post verification", "student safety"],
+  authors: [{ name: "InternGuard" }],
+  creator: "InternGuard",
 };
 
 export default function RootLayout({
@@ -19,7 +19,12 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en" suppressHydrationWarning>
-      <body className="min-h-screen bg-orange-50 antialiased">
+      <head>
+        <link rel="preconnect" href="https://fonts.googleapis.com" />
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
+        <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet" />
+      </head>
+      <body className="min-h-screen bg-slate-50 antialiased text-slate-800">
         {children}
       </body>
     </html>

@@ -1,18 +1,17 @@
 export default function Footer() {
   return (
-    <footer className="bg-primaryDark text-white py-10">
-      <div className="max-w-6xl mx-auto px-6 flex flex-col md:flex-row justify-between items-center">
-        <p>© 2026 Fake Internship Detector</p>
-        <div className="flex gap-6 mt-4 md:mt-0">
-          <a href="#" className="hover:underline">
-            GitHub
-          </a>
-          <a href="#" className="hover:underline">
-            Contact
-          </a>
-          <a href="#" className="hover:underline">
-            Privacy
-          </a>
+    <footer className="bg-slate-950 text-slate-400 py-10 border-t border-slate-800">
+      <div className="max-w-7xl mx-auto px-6 flex flex-col md:flex-row justify-between items-center gap-4">
+        <div className="flex items-center gap-2">
+          <div className="w-6 h-6 rounded-md bg-gradient-to-br from-brand to-accent flex items-center justify-center">
+            <span className="text-white font-bold text-[10px]">IG</span>
+          </div>
+          <span className="text-sm">© 2026 InternGuard. All rights reserved.</span>
+        </div>
+        <div className="flex gap-6 text-sm">
+          <a href="#" className="hover:text-white transition-colors">GitHub</a>
+          <a href="#" className="hover:text-white transition-colors">Contact</a>
+          <a href="#" className="hover:text-white transition-colors">Privacy</a>
         </div>
       </div>
     </footer>
