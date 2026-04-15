@@ -15,12 +15,14 @@ CREATE TABLE IF NOT EXISTS scam_reports (
 CREATE TABLE IF NOT EXISTS predictions (
     id SERIAL PRIMARY KEY,
     job_text TEXT NOT NULL,
+    company_name VARCHAR(255),
     risk_score INTEGER NOT NULL,
     label VARCHAR(10) NOT NULL,
     confidence FLOAT NOT NULL,
     matched_keywords TEXT[],
     scam_probability FLOAT,
     safe_probability FLOAT,
+    marked_as_scam BOOLEAN NOT NULL DEFAULT FALSE,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
@@ -29,5 +31,12 @@ CREATE TABLE IF NOT EXISTS user_feedback (
     prediction_id INTEGER REFERENCES predictions(id),
     is_accurate BOOLEAN NOT NULL,
     comment TEXT,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS companies (
+    id SERIAL PRIMARY KEY,
+    name VARCHAR(255) UNIQUE NOT NULL,
+    is_verified BOOLEAN DEFAULT FALSE,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );

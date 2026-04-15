@@ -6,7 +6,10 @@ from sqlalchemy import String, Integer, Float, Boolean, Text, ARRAY, TIMESTAMP, 
 
 load_dotenv()
 
-DATABASE_URL = os.getenv("DATABASE_URL", "postgresql+asyncpg://postgres:postgres@localhost:5432/internguard")
+DATABASE_URL = os.getenv(
+    "DATABASE_URL",
+    "postgresql+asyncpg://postgres:Admin-14@localhost:5432/internguard",
+)
 
 engine = create_async_engine(DATABASE_URL, echo=False)
 async_session = async_sessionmaker(engine, class_=AsyncSession, expire_on_commit=False)
@@ -36,12 +39,14 @@ class Prediction(Base):
     __tablename__ = "predictions"
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
     job_text: Mapped[str] = mapped_column(Text, nullable=False)
+    company_name: Mapped[str | None] = mapped_column(String(255))
     risk_score: Mapped[int] = mapped_column(Integer, nullable=False)
     label: Mapped[str] = mapped_column(String(10), nullable=False)
     confidence: Mapped[float] = mapped_column(Float, nullable=False)
     matched_keywords = mapped_column(ARRAY(String(255)))
     scam_probability: Mapped[float | None] = mapped_column(Float)
     safe_probability: Mapped[float | None] = mapped_column(Float)
+    marked_as_scam: Mapped[bool] = mapped_column(Boolean, default=False, server_default="false")
     created_at = mapped_column(TIMESTAMP, server_default=func.now())
 
 
@@ -52,6 +57,15 @@ class UserFeedback(Base):
     is_accurate: Mapped[bool] = mapped_column(Boolean, nullable=False)
     comment: Mapped[str | None] = mapped_column(Text)
     created_at = mapped_column(TIMESTAMP, server_default=func.now())
+
+
+class Company(Base):
+    __tablename__ = "companies"
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    name: Mapped[str] = mapped_column(String(255), unique=True, nullable=False)
+    is_verified: Mapped[bool] = mapped_column(Boolean, default=False, server_default="false")
+    created_at = mapped_column(TIMESTAMP, server_default=func.now())
+
 
 
 async def init_db():

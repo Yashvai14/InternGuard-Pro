@@ -1,281 +1,133 @@
-# InternGuard Pro
+<div align="center">
+  <h1>🛡️ InternGuard Pro</h1>
+  <p><strong>AI-powered Fake Internship & Job Post Detection System built to protect students.</strong></p>
+  
+  <p>
+    <img src="https://img.shields.io/badge/Next.js-black?style=for-the-badge&logo=next.js&logoColor=white" alt="Next.js" />
+    <img src="https://img.shields.io/badge/FastAPI-005571?style=for-the-badge&logo=fastapi" alt="FastAPI" />
+    <img src="https://img.shields.io/badge/Python-3776AB?style=for-the-badge&logo=python&logoColor=white" alt="Python" />
+    <img src="https://img.shields.io/badge/PostgreSQL-316192?style=for-the-badge&logo=postgresql&logoColor=white" alt="PostgreSQL" />
+  </p>
+</div>
 
-AI-powered Fake Internship & Job Post Detection System built for students. Paste any job or internship description and get an instant scam risk analysis with a confidence score, risk rating, and flagged suspicious keywords.
+<br />
 
-## Tech Stack
+InternGuard Pro analyzes job or internship descriptions and provides an instant scam risk analysis with a confidence score, risk rating, and automatically flagged suspicious keywords.
 
-- **Frontend:** Next.js 16 (App Router) + Tailwind CSS v4
-- **Backend:** FastAPI (Python)
-- **Database:** PostgreSQL
-- **ML Model:** TF-IDF + Logistic Regression (scikit-learn)
+## ✨ Key Features
 
-## Project Structure
+- **🧠 Advanced ML Detection**: TF-IDF + Logistic Regression model to intelligently flag scams.
+- **📊 Interactive Analytics Dashboard**: View aggregate network statistics and a ledger of analyzed posts.
+- **🏢 Verified Companies Registry**: Easily track, manage, and label companies as verified or unverified.
+- **📥 Granular Report Export**: Instantly download dedicated, data-rich **PDF reports** for any individual prediction.
+- **⚡ Real-time Feedback Loop**: Safely report posts and incorporate user feedback.
 
-```
+---
+
+## 🏗️ Project Structure
+
+```text
 internguard-pro/
-├── app/
-│   ├── page.tsx                  # Landing page
-│   ├── layout.tsx                # Root layout
-│   ├── globals.css               # Global styles
-│   ├── analyze/
-│   │   └── page.tsx              # Job description input page
-│   ├── result/
-│   │   └── page.tsx              # Analysis result display page
-│   └── api/
-│       ├── analyze/route.ts      # API proxy → FastAPI /predict
-│       └── feedback/route.ts     # API proxy → FastAPI /feedback
-├── components/
-│   ├── Navbar.tsx
-│   ├── Hero.tsx
-│   ├── Problem.tsx
-│   ├── HowItWorks.tsx
-│   ├── Features.tsx
-│   ├── Trust.tsx
-│   └── Footer.tsx
-├── backend/
-│   ├── main.py                   # FastAPI app (endpoints)
-│   ├── database.py               # SQLAlchemy async models
-│   ├── schema.sql                # PostgreSQL table definitions
-│   ├── dataset.csv               # 40 labeled training samples
-│   ├── requirements.txt          # Python dependencies
-│   └── ml/
-│       ├── __init__.py
-│       ├── train.py              # Model training script
-│       └── predict.py            # Prediction logic
-├── package.json
-├── tailwind.config.ts
-├── tsconfig.json
-└── README.md
+├── app/                          # Next.js Frontend
+│   ├── analyze/                  # Job description input page
+│   ├── dashboard/                # Analytics & company verification
+│   ├── result/                   # Analysis result display
+│   └── api/                      # Frontend proxies to FastAPI
+├── components/                   # Reusable React components
+└── backend/                      # FastAPI Python Application
+    ├── main.py                   # Route definitions
+    ├── database.py               # SQLAlchemy async models
+    ├── schema.sql                # PostgreSQL definitions
+    └── ml/                       # Machine Learning logic & scripts
 ```
 
-## Prerequisites
+---
 
-Make sure the following are installed on your system:
+## 🚀 Getting Started
 
-- **Node.js** (v18 or higher) — [Download](https://nodejs.org/)
-- **Python** (v3.10 or higher) — [Download](https://www.python.org/downloads/)
-- **PostgreSQL** (v14 or higher) — [Download](https://www.postgresql.org/download/)
-- **pip** (comes with Python)
-- **npm** (comes with Node.js)
+### Prerequisites
 
-## Setup Instructions
+- **Node.js** (v18+)
+- **Python** (v3.10+)
+- **PostgreSQL** (v14+)
 
-### Step 1: Clone the Repository
+### 1. Database Setup
 
-```powershell
-git clone <your-repo-url>
-cd internguard-pro
-```
-
-### Step 2: Set Up PostgreSQL Database
-
-Open a terminal and run:
+Create the PostgreSQL database and initialize your tables:
 
 ```powershell
 psql -U postgres -c "CREATE DATABASE internguard;"
 psql -U postgres -d internguard -f backend/schema.sql
 ```
 
-This creates the `internguard` database and the following tables:
-- `job_posts` — stores raw job post text
-- `scam_reports` — stores user-submitted scam reports
-- `predictions` — stores every ML prediction result
-- `user_feedback` — stores user feedback on prediction accuracy
+> **Note:** The default setup connects to `postgresql+asyncpg://postgres:Admin-14@localhost:5432/internguard`. Update your `DATABASE_URL` environment variables if your username/password differs.
 
-> If your PostgreSQL uses a different username/password, update the `DATABASE_URL` environment variable (see Environment Variables below).
+### 2. Backend Setup (FastAPI & ML)
 
-### Step 3: Set Up the Backend (FastAPI + ML)
+Create your virtual environment, install dependencies, and train the initial model:
 
 ```powershell
 cd backend
 python -m venv venv
 venv\Scripts\activate
 pip install -r requirements.txt
-```
 
-#### Train the ML Model
-
-```powershell
+# Train the ML Model
 python -m ml.train
-```
 
-This reads `dataset.csv`, trains a TF-IDF + Logistic Regression model, and saves `model.pkl` and `extractor.pkl` inside `backend/ml/`.
-
-Expected output:
-```
-Cross-validation accuracy: 0.95 (+/- 0.05)
-Model and extractor saved.
-```
-
-#### Start the Backend Server
-
-```powershell
+# Start the Backend Server
 uvicorn main:app --reload --port 8000
 ```
+> Ensure your API is running and healthy at `http://localhost:8000/health`.
 
-The API will be available at `http://localhost:8000`.
+### 3. Frontend Setup (Next.js)
 
-Verify it's running:
-```powershell
-curl http://localhost:8000/health
-```
-
-Expected response: `{"status":"healthy"}`
-
-### Step 4: Set Up the Frontend (Next.js)
-
-Open a **new terminal** and navigate to the project root:
+Open a new terminal at the project root:
 
 ```powershell
-cd internguard-pro
 npm install
 npm run dev
 ```
 
-The frontend will be available at `http://localhost:3000`.
+Visit [`http://localhost:3000`](http://localhost:3000) in your browser!
 
-## Environment Variables
+---
 
-| Variable | Default | Description |
-|---|---|---|
-| `DATABASE_URL` | `postgresql+asyncpg://postgres:postgres@localhost:5432/internguard` | PostgreSQL connection string (set in backend) |
-| `BACKEND_URL` | `http://localhost:8000` | FastAPI backend URL (set in frontend `.env.local`) |
+## 📡 Core API Endpoints
 
-To override, create a `.env.local` file in the project root for Next.js:
+### Predictions & Feedback
+- `POST /predict`: Submit job text for scam risk classification.
+- `POST /feedback`: Contribute user feedback regarding prediction accuracy.
+- `GET  /dashboard/report/{prediction_id}`: Export highly-styled **PDF Reports** for a single prediction.
 
-```
-BACKEND_URL=http://localhost:8000
-```
+### Dashboard & Companies
+- `GET  /dashboard/stats`: Retrieve top-level detection metrics.
+- `GET  /dashboard/predictions`: Pull historical, filterable scan ledgers.
+- `PATCH /dashboard/predictions/{prediction_id}/mark`: Admin flag for confirmed scams.
+- `GET  /dashboard/companies`: View actively extracted companies.
+- `PATCH /dashboard/companies/{company_id}/verify`: Manage company certification safely.
 
-Or set the database URL as a system environment variable before starting the backend:
+---
 
-```powershell
-$env:DATABASE_URL = "postgresql+asyncpg://youruser:yourpass@localhost:5432/internguard"
-```
+## 🗄️ Database Schema
 
-## How to Use
+| Table | Description |
+|---|---|
+| `job_posts` | Retains raw text, source, and timestamps of all processed posts. |
+| `scam_reports` | Maintains manual reports from users flagging certain posts as scams. |
+| `predictions` | Stores exact model probabilities, matched keyword arrays, risk scores, and admin marks. |
+| `companies` | A dedicated platform registry to catalog companies and `is_verified` standing. |
+| `user_feedback` | Stores crowd-sourced feedback to aid future ML iterations. |
 
-1. Open `http://localhost:3000` in your browser
-2. Click **"Check a Job Post"** on the homepage (or navigate to `/analyze`)
-3. Paste the full job/internship description into the text area
-4. Click **"Check This Post"**
-5. View the results on the `/result` page:
-   - **Risk Score** (0–100) with color-coded severity
-   - **Scam / Safe** verdict label
-   - **Confidence %** of the prediction
-   - **Suspicious keywords** highlighted as red tags
-   - **Probability breakdown** (scam % vs safe %)
-6. Submit feedback on whether the analysis was accurate or not
+---
 
-## API Endpoints
+## 🤖 ML Model Insights
 
-### `POST /predict`
+InternGuard Pro relies on a tuned **Logistic Regression** classifier:
+- **Feature Extraction**: TF-IDF vectors processing essential unigrams & bigrams.
+- **Rule-based Additions**: Checks for exactly 30+ highly-effective binary scam flags (e.g., `"registration fee"`, `"whatsapp only"`).
+- **Heuristics**: Tracks excessive capitalization, exclamation counts, and specific currency constraints.
 
-Analyze a job post for scam indicators.
+## 📜 License
 
-**Request:**
-```json
-{
-  "text": "Urgent hiring! Pay Rs 500 registration fee. No interview needed. WhatsApp only."
-}
-```
-
-**Response:**
-```json
-{
-  "prediction_id": 1,
-  "risk_score": 92,
-  "label": "scam",
-  "confidence": 92.3,
-  "matched_keywords": ["registration fee", "no interview", "whatsapp only", "urgent hiring"],
-  "scam_probability": 92.3,
-  "safe_probability": 7.7
-}
-```
-
-### `POST /feedback`
-
-Submit user feedback on a prediction.
-
-**Request:**
-```json
-{
-  "prediction_id": 1,
-  "is_accurate": true,
-  "comment": "This was definitely a scam"
-}
-```
-
-**Response:**
-```json
-{
-  "status": "ok"
-}
-```
-
-### `GET /health`
-
-Health check endpoint. Returns `{"status": "healthy"}`.
-
-## Database Schema
-
-### `job_posts`
-- `id` — Primary key
-- `text` — Job post content
-- `source` — Where the post was found
-- `created_at` — Timestamp
-
-### `scam_reports`
-- `id` — Primary key
-- `job_post_id` — Foreign key to `job_posts`
-- `reporter_reason` — Why it was reported
-- `reported_at` — Timestamp
-
-### `predictions`
-- `id` — Primary key
-- `job_text` — Analyzed text
-- `risk_score` — 0 to 100
-- `label` — "scam" or "safe"
-- `confidence` — Prediction confidence %
-- `matched_keywords` — Array of flagged keywords
-- `scam_probability` / `safe_probability` — Raw probabilities
-- `created_at` — Timestamp
-
-### `user_feedback`
-- `id` — Primary key
-- `prediction_id` — Foreign key to `predictions`
-- `is_accurate` — Boolean
-- `comment` — Optional user comment
-- `created_at` — Timestamp
-
-## ML Model Details
-
-- **Algorithm:** Logistic Regression
-- **Features:**
-  - TF-IDF vectors (unigrams + bigrams, max 500 features)
-  - 30 binary keyword flags (e.g., "registration fee", "guaranteed placement", "whatsapp only")
-  - Text length, exclamation count, rupee mention count, total keyword match count
-- **Training data:** 40 manually labeled job posts (20 scam, 20 safe)
-- **Saved artifacts:** `backend/ml/model.pkl`, `backend/ml/extractor.pkl`
-
-## Quick Start Summary
-
-```powershell
-# Terminal 1 — Database
-psql -U postgres -c "CREATE DATABASE internguard;"
-psql -U postgres -d internguard -f backend/schema.sql
-
-# Terminal 2 — Backend
-cd backend
-python -m venv venv
-venv\Scripts\activate
-pip install -r requirements.txt
-python -m ml.train
-uvicorn main:app --reload --port 8000
-
-# Terminal 3 — Frontend
-npm install
-npm run dev
-```
-
-Open `http://localhost:3000` and start detecting fake internships.
+Distributed under the MIT License. See `LICENSE` for more information.
