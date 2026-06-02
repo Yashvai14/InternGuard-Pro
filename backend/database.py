@@ -46,6 +46,8 @@ class Prediction(Base):
     matched_keywords = mapped_column(ARRAY(String(255)))
     scam_probability: Mapped[float | None] = mapped_column(Float)
     safe_probability: Mapped[float | None] = mapped_column(Float)
+    explanation: Mapped[str | None] = mapped_column(Text)
+    ollama_flags = mapped_column(ARRAY(String(255)))
     marked_as_scam: Mapped[bool] = mapped_column(Boolean, default=False, server_default="false")
     created_at = mapped_column(TIMESTAMP, server_default=func.now())
 

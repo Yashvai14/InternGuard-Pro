@@ -22,6 +22,8 @@ CREATE TABLE IF NOT EXISTS predictions (
     matched_keywords TEXT[],
     scam_probability FLOAT,
     safe_probability FLOAT,
+    explanation TEXT,
+    ollama_flags TEXT[],
     marked_as_scam BOOLEAN NOT NULL DEFAULT FALSE,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );

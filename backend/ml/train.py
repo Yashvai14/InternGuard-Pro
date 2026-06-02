@@ -3,7 +3,7 @@ import numpy as np
 import joblib
 import os
 from sklearn.feature_extraction.text import TfidfVectorizer
-from sklearn.linear_model import LogisticRegression
+from sklearn.ensemble import RandomForestClassifier
 from sklearn.model_selection import cross_val_score
 from sklearn.pipeline import Pipeline
 from sklearn.base import BaseEstimator, TransformerMixin
@@ -20,7 +20,11 @@ SUSPICIOUS_KEYWORDS = [
     "daily payment", "guaranteed payment", "buy back",
     "no degree needed", "copy paste", "form filling", "ad posting",
     "forwarding job", "whatsapp group",
-    "work from home with high salary", "high salary"
+    "work from home with high salary", "high salary",
+    "crypto investment", "wire transfer", "upfront fee", "commission based only",
+    "multi-level marketing", "pyramid", "mlm", "deposit money", 
+    "onboarding fee", "platform fee", "training package", "software fee",
+    "secret method", "get rich quick", "10x returns", "bitcoin"
 ]
 
 
@@ -53,7 +57,7 @@ def train():
     y = (df["label"] == "scam").astype(int).values
 
     extractor = FeatureExtractor()
-    model = LogisticRegression(max_iter=1000, C=1.0)
+    model = RandomForestClassifier(n_estimators=100, random_state=42)
 
     extractor.fit(X, y)
     X_transformed = extractor.transform(X)

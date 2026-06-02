@@ -12,6 +12,8 @@ interface PredictionResult {
   keywords: string[];
   scam_probability: number;
   safe_probability: number;
+  explanation?: string;
+  job_text?: string;
 }
 
 function getRiskGradient(score: number) {
@@ -41,6 +43,9 @@ function getRiskTextColor(score: number) {
 export default function ResultPage() {
   const [result, setResult] = useState<PredictionResult | null>(null);
   const [feedbackSent, setFeedbackSent] = useState(false);
+  const [chatMessages, setChatMessages] = useState<{role: string, content: string}[]>([]);
+  const [chatInput, setChatInput] = useState("");
+  const [isChatLoading, setIsChatLoading] = useState(false);
   const router = useRouter();
 
   useEffect(() => {
@@ -49,7 +54,16 @@ export default function ResultPage() {
       router.push("/analyze");
       return;
     }
-    setResult(JSON.parse(stored));
+    const parsed = JSON.parse(stored);
+    setResult(parsed);
+    
+    // Initialize chat
+    setChatMessages([
+      {
+        role: "assistant",
+        content: `Hi! I've analyzed this job post and determined it's **${parsed.label.toUpperCase()}** with a risk score of ${parsed.risk_score}. Do you have any specific questions about my analysis?`
+      }
+    ]);
   }, [router]);
 
   const sendFeedback = async (isAccurate: boolean) => {
@@ -66,6 +80,36 @@ export default function ResultPage() {
       setFeedbackSent(true);
     } catch {
       /* ignore */
+    }
+  };
+
+  const sendChatMessage = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!chatInput.trim()) return;
+    
+    const jobText = result?.job_text || "The user is asking about the job they just analyzed, but the exact text is not available in their current session. Please answer their questions generally.";
+
+    const userMessage = chatInput.trim();
+    setChatInput("");
+    setChatMessages((prev) => [...prev, { role: "user", content: userMessage }]);
+    setIsChatLoading(true);
+
+    try {
+      const response = await fetch("/api/chat", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          job_text: jobText,
+          messages: [...chatMessages, { role: "user", content: userMessage }],
+        }),
+      });
+      
+      const data = await response.json();
+      setChatMessages((prev) => [...prev, { role: "assistant", content: data.reply }]);
+    } catch (error) {
+      setChatMessages((prev) => [...prev, { role: "assistant", content: "Sorry, I'm having trouble connecting right now." }]);
+    } finally {
+      setIsChatLoading(false);
     }
   };
 
@@ -113,6 +157,21 @@ export default function ResultPage() {
             <div className={`bg-gradient-to-r ${getRiskGradient(result.risk_score)} rounded-full h-3 transition-all duration-1000`} style={{ width: `${result.risk_score}%` }} />
           </div>
         </div>
+
+        {/* Live Suggestions Box */}
+        {result.explanation && (
+          <div className="bg-white rounded-2xl border border-indigo-100 shadow-sm p-6 mb-6 animate-fade-in-up">
+            <div className="flex items-center gap-3 mb-4">
+              <div className="w-8 h-8 rounded-full bg-indigo-100 flex items-center justify-center text-indigo-600">
+                <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20"><path d="M10 2a6 6 0 00-6 6v3.586l-.707.707A1 1 0 004 14h12a1 1 0 00.707-1.707L16 11.586V8a6 6 0 00-6-6zM10 18a3 3 0 01-3-3h6a3 3 0 01-3 3z" /></svg>
+              </div>
+              <h2 className="text-lg font-bold text-slate-800">AI Analysis & Suggestions</h2>
+            </div>
+            <div className="text-slate-600 leading-relaxed whitespace-pre-wrap text-sm">
+              {result.explanation}
+            </div>
+          </div>
+        )}
 
         <div className="grid grid-cols-2 gap-4 mb-6 animate-fade-in-up-delay">
           <div className="bg-white rounded-2xl border border-slate-100 p-6 shadow-sm">
@@ -194,6 +253,55 @@ export default function ResultPage() {
             <p className="text-emerald-700 text-sm font-medium">Thank you for your feedback!</p>
           </div>
         )}
+
+        {/* Chatbox UI */}
+        <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden mt-8 animate-fade-in-up-delay-2 flex flex-col h-[500px]">
+          <div className="bg-slate-50 border-b border-slate-200 px-6 py-4 flex items-center gap-3">
+            <div className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse"></div>
+            <h3 className="font-bold text-slate-800">Live Assistant</h3>
+            <span className="text-xs font-medium text-slate-500 bg-slate-200 px-2 py-0.5 rounded-full">Powered by Ollama</span>
+          </div>
+          
+          <div className="flex-1 overflow-y-auto p-6 space-y-4">
+            {chatMessages.map((msg, idx) => (
+              <div key={idx} className={`flex ${msg.role === "user" ? "justify-end" : "justify-start"}`}>
+                <div className={`max-w-[80%] rounded-2xl px-4 py-3 text-sm ${msg.role === "user" ? "bg-indigo-600 text-white rounded-br-sm" : "bg-slate-100 text-slate-800 rounded-bl-sm"}`}>
+                  {msg.content}
+                </div>
+              </div>
+            ))}
+            {isChatLoading && (
+              <div className="flex justify-start">
+                <div className="bg-slate-100 text-slate-800 rounded-2xl rounded-bl-sm px-4 py-3 text-sm flex gap-1 items-center">
+                  <div className="w-1.5 h-1.5 bg-slate-400 rounded-full animate-bounce"></div>
+                  <div className="w-1.5 h-1.5 bg-slate-400 rounded-full animate-bounce" style={{ animationDelay: '0.2s' }}></div>
+                  <div className="w-1.5 h-1.5 bg-slate-400 rounded-full animate-bounce" style={{ animationDelay: '0.4s' }}></div>
+                </div>
+              </div>
+            )}
+          </div>
+          
+          <form onSubmit={sendChatMessage} className="p-4 bg-white border-t border-slate-100">
+            <div className="flex gap-2">
+              <input
+                type="text"
+                value={chatInput}
+                onChange={(e) => setChatInput(e.target.value)}
+                placeholder="Ask a question about this job..."
+                className="flex-1 bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all"
+                disabled={isChatLoading}
+              />
+              <button
+                type="submit"
+                disabled={isChatLoading || !chatInput.trim()}
+                className="bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl px-5 flex items-center justify-center transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" /></svg>
+              </button>
+            </div>
+          </form>
+        </div>
+        
       </div>
     </div>
   );

@@ -71,6 +71,14 @@ class VerifyCompanyRequest(BaseModel):
     is_verified: bool
 
 
+class ChatMessage(BaseModel):
+    role: str
+    content: str
+
+class ChatRequest(BaseModel):
+    job_text: str
+    messages: List[ChatMessage]
+
 # ─── Predict ─────────────────────────────────────────────────────────────────
 
 @app.post("/predict")
@@ -103,8 +111,9 @@ async def predict_endpoint(req: PredictRequest, request: Request):
                     label=result["label"],
                     confidence=result["confidence"],
                     matched_keywords=result["keywords"],
-                    scam_probability=result["scam_probability"],
                     safe_probability=result["safe_probability"],
+                    explanation=result.get("explanation"),
+                    ollama_flags=result.get("ollama_flags"),
                     marked_as_scam=False,
                 )
                 session.add(prediction)
@@ -116,6 +125,7 @@ async def predict_endpoint(req: PredictRequest, request: Request):
 
     return {
         "prediction_id": prediction_id,
+        "job_text": req.text,
         **result,
     }
 
@@ -140,6 +150,46 @@ async def feedback_endpoint(req: FeedbackRequest, request: Request):
         traceback.print_exc()
         raise HTTPException(status_code=500, detail=f"Feedback save failed: {str(e)}")
 
+
+# ─── Chat ─────────────────────────────────────────────────────────────────────
+
+import httpx
+
+@app.post("/chat")
+async def chat_endpoint(req: ChatRequest):
+    if not req.job_text.strip():
+        raise HTTPException(status_code=400, detail="Job text cannot be empty")
+        
+    system_prompt = (
+        "You are an expert fraud detection AI assistant for InternGuard. "
+        "Your role is to help users understand why a specific job posting is safe or a scam, "
+        "and answer any questions they have about the job posting. "
+        "Here is the job posting in question:\n\n"
+        f"--- JOB POSTING ---\n{req.job_text}\n--- END JOB POSTING ---\n\n"
+        "Please provide helpful, clear, and concise answers based on the text above. Keep responses short."
+    )
+    
+    formatted_messages = [{"role": "system", "content": system_prompt}]
+    for msg in req.messages:
+        formatted_messages.append({"role": msg.role, "content": msg.content})
+
+    try:
+        async with httpx.AsyncClient(timeout=120.0) as client:
+            resp = await client.post(
+                "http://localhost:11434/api/chat",
+                json={
+                    "model": "llama3",
+                    "messages": formatted_messages,
+                    "stream": False
+                }
+            )
+            resp.raise_for_status()
+            data = resp.json()
+            reply = data.get("message", {}).get("content", "Sorry, I couldn't process that.")
+            return {"reply": reply}
+    except Exception as e:
+        traceback.print_exc()
+        raise HTTPException(status_code=500, detail=f"Chat failed: {str(e)}")
 
 # ─── Dashboard: List all predictions ─────────────────────────────────────────
 
@@ -309,38 +359,125 @@ async def download_prediction_report(prediction_id: int, request: Request):
 
             pdf = FPDF()
             pdf.add_page()
-            pdf.set_font("helvetica", style="B", size=16)
-            pdf.cell(0, 10, txt="InternGuard Prediction Report", ln=True, align="C")
-            pdf.ln(10)
-
-            def add_row(key, val):
-                safe_val = str(val).encode("latin-1", "replace").decode("latin-1")
-                pdf.set_font("helvetica", style="B", size=11)
-                pdf.cell(40, 8, txt=str(key))
-                pdf.set_font("helvetica", size=11)
-                # handle long text in simple cell if we truncate, or just use multi_cell with a set width
-                # actually, to avoid width issues, let's move down manually
-                pdf.set_xy(pdf.get_x(), pdf.get_y())
-                # Just use multi_cell but explicitly providing width 150
-                pdf.multi_cell(150, 8, txt=safe_val)
-
-            add_row("Prediction ID:", prediction.id)
-            add_row("Company Name:", prediction.company_name or "N/A")
-            add_row("Risk Score:", prediction.risk_score)
-            add_row("Label:", prediction.label.upper())
-            add_row("Confidence:", f"{round((prediction.confidence or 0) * 100, 1)}%")
-            add_row("Scam Prob:", f"{round((prediction.scam_probability or 0) * 100, 1)}%")
-            add_row("Safe Prob:", f"{round((prediction.safe_probability or 0) * 100, 1)}%")
-            add_row("Marked Scam:", "Yes" if prediction.marked_as_scam else "No")
-            add_row("Matched KWs:", ", ".join(prediction.matched_keywords or []) or "None")
-            add_row("Scanned At:", prediction.created_at.strftime("%Y-%m-%d %H:%M:%S") if prediction.created_at else "N/A")
             
+            # --- Title & Header ---
+            pdf.set_font("helvetica", style="B", size=20)
+            pdf.set_text_color(0, 51, 102) # Dark blue
+            pdf.cell(0, 15, txt="InternGuard Analysis Report", ln=True, align="C")
+            
+            # Separator line
+            pdf.set_draw_color(0, 51, 102)
+            pdf.set_line_width(0.5)
+            pdf.line(10, 25, 200, 25)
             pdf.ln(5)
-            pdf.set_font("helvetica", style="B", size=12)
-            pdf.cell(0, 10, txt="Job Text Extract:", ln=True)
-            pdf.set_font("helvetica", size=10)
+
+            # Helper for section headers
+            def section_header(title):
+                pdf.ln(5)
+                pdf.set_font("helvetica", style="B", size=12)
+                pdf.set_text_color(255, 255, 255)
+                pdf.set_fill_color(0, 102, 204)
+                pdf.cell(0, 8, txt=f"  {title}", ln=True, fill=True)
+                pdf.ln(2)
+
+            def add_row(key, val, y_offset=0):
+                safe_val = str(val).encode("latin-1", "replace").decode("latin-1")
+                # Store current Y
+                current_y = pdf.get_y() + y_offset
+                
+                # Draw Key at X=15
+                pdf.set_xy(15, current_y)
+                pdf.set_font("helvetica", style="B", size=10)
+                pdf.set_text_color(0, 0, 0)
+                pdf.cell(45, 6, txt=str(key))
+                
+                # Draw Value at X=60
+                pdf.set_xy(60, current_y)
+                pdf.set_font("helvetica", size=10)
+                pdf.set_text_color(50, 50, 50)
+                pdf.multi_cell(135, 6, txt=safe_val)
+                # Next line is determined by multi_cell's effect on Y
+                pdf.ln(2)
+
+            # --- 1. Basic Information ---
+            section_header("1. Basic Information")
+            add_row("Prediction ID:", prediction.id, y_offset=2)
+            add_row("Company Name:", prediction.company_name or "N/A")
+            add_row("Scanned At:", prediction.created_at.strftime("%Y-%m-%d %H:%M:%S") if prediction.created_at else "N/A")
+            add_row("Marked as Scam:", "Yes (Manually Flagged)" if prediction.marked_as_scam else "No")
+
+            # --- 2. Risk Assessment ---
+            section_header("2. Risk Assessment")
+            
+            # Custom label row
+            current_y = pdf.get_y() + 2
+            pdf.set_xy(15, current_y)
+            pdf.set_font("helvetica", style="B", size=10)
+            pdf.set_text_color(0, 0, 0)
+            pdf.cell(45, 6, txt="Classification:")
+            
+            pdf.set_xy(60, current_y)
+            label_text = prediction.label.upper()
+            if label_text == "SCAM":
+                pdf.set_text_color(204, 0, 0) # Red
+            else:
+                pdf.set_text_color(0, 153, 0) # Green
+            pdf.set_font("helvetica", style="B", size=10)
+            pdf.cell(135, 6, txt=label_text, ln=True)
+            pdf.ln(2)
+            
+            # Reset colors
+            pdf.set_text_color(0, 0, 0)
+            add_row("Risk Score:", f"{prediction.risk_score} / 100")
+            add_row("AI Confidence:", f"{round((prediction.confidence or 0) * 100, 1)}%")
+            add_row("Scam Probability:", f"{round((prediction.scam_probability or 0) * 100, 1)}%")
+            add_row("Safe Probability:", f"{round((prediction.safe_probability or 0) * 100, 1)}%")
+            add_row("Matched Keywords:", ", ".join(prediction.matched_keywords or []) or "None Detected")
+
+            # --- 3. AI Explanation (Ollama) ---
+            section_header("3. Detailed AI Analysis")
+            pdf.ln(2)
+            pdf.set_font("helvetica", style="I", size=10)
+            pdf.set_text_color(40, 40, 40)
+            explanation_text = getattr(prediction, "explanation", None) or "No detailed explanation available for this report."
+            safe_explanation = explanation_text.encode("latin-1", "replace").decode("latin-1")
+            
+            # Store X/Y to add an indent
+            pdf.set_x(15)
+            pdf.multi_cell(180, 6, txt=safe_explanation)
+            
+            ollama_flags = getattr(prediction, "ollama_flags", [])
+            if ollama_flags and len(ollama_flags) > 0:
+                pdf.ln(2)
+                pdf.set_x(15)
+                pdf.set_font("helvetica", style="B", size=10)
+                pdf.cell(0, 6, txt="Identified Red Flags:", ln=True)
+                pdf.set_font("helvetica", size=10)
+                pdf.set_text_color(204, 0, 0)
+                for flag in ollama_flags:
+                    pdf.set_x(20)
+                    safe_flag = str(flag).encode("latin-1", "replace").decode("latin-1")
+                    pdf.multi_cell(170, 6, txt=f"- {safe_flag}")
+
+            # --- 4. Job Description Extract ---
+            section_header("4. Job Description Extract")
+            pdf.ln(2)
+            pdf.set_font("helvetica", size=9)
+            pdf.set_text_color(60, 60, 60)
+            pdf.set_fill_color(245, 245, 245)
+            pdf.set_draw_color(200, 200, 200)
+            
             safe_text = (prediction.job_text or "").encode("latin-1", "replace").decode("latin-1")
-            pdf.multi_cell(0, 6, txt=safe_text[:1500] + ("..." if len(safe_text) > 1500 else ""))
+            display_text = safe_text[:2000] + ("\n\n[...Truncated due to length...]" if len(safe_text) > 2000 else "")
+            
+            # Output with a light border and background
+            pdf.multi_cell(0, 5, txt=display_text, border=1, fill=True)
+
+            # Footer
+            pdf.ln(10)
+            pdf.set_font("helvetica", style="I", size=8)
+            pdf.set_text_color(150, 150, 150)
+            pdf.cell(0, 10, txt="This report was automatically generated by the InternGuard AI assessment tool.", ln=True, align="C")
 
             pdf_bytes = bytes(pdf.output())
             filename = f"internguard_prediction_{prediction_id}_{datetime.now().strftime('%Y%m%d')}.pdf"

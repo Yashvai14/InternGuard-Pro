@@ -7,20 +7,21 @@
     <img src="https://img.shields.io/badge/FastAPI-005571?style=for-the-badge&logo=fastapi" alt="FastAPI" />
     <img src="https://img.shields.io/badge/Python-3776AB?style=for-the-badge&logo=python&logoColor=white" alt="Python" />
     <img src="https://img.shields.io/badge/PostgreSQL-316192?style=for-the-badge&logo=postgresql&logoColor=white" alt="PostgreSQL" />
+    <img src="https://img.shields.io/badge/Ollama-FFFFFF?style=for-the-badge&logo=ollama&logoColor=black" alt="Ollama" />
   </p>
 </div>
 
 <br />
 
-InternGuard Pro analyzes job or internship descriptions and provides an instant scam risk analysis with a confidence score, risk rating, and automatically flagged suspicious keywords.
+InternGuard Pro analyzes job or internship descriptions and provides an instant scam risk analysis. It uses a **Hybrid AI Engine** combining a traditional Machine Learning `RandomForestClassifier` with deep semantic analysis from an **Ollama (`llama3`)** local Large Language Model to deliver unparalleled accuracy, live suggestions, and an interactive chat assistant.
 
 ## ✨ Key Features
 
-- **🧠 Advanced ML Detection**: TF-IDF + Logistic Regression model to intelligently flag scams.
-- **📊 Interactive Analytics Dashboard**: View aggregate network statistics and a ledger of analyzed posts.
-- **🏢 Verified Companies Registry**: Easily track, manage, and label companies as verified or unverified.
-- **📥 Granular Report Export**: Instantly download dedicated, data-rich **PDF reports** for any individual prediction.
-- **⚡ Real-time Feedback Loop**: Safely report posts and incorporate user feedback.
+- **🧠 Hybrid AI Detection**: Blends probabilities from a `RandomForestClassifier` (trained on a comprehensive custom dataset) and a Local LLM (`llama3`).
+- **💬 Interactive Live Assistant**: Chat directly with the AI on the result page to ask follow-up questions about specific red flags or the job description.
+- **💡 Live AI Suggestions**: Automatically generates actionable advice and extracts highly specific red flags explaining *why* a post is a scam.
+- **📊 Analytics Dashboard**: View aggregate network statistics, manage verified companies, and track all analyzed posts.
+- **📥 Pixel-Perfect PDF Reports**: Download perfectly aligned, data-rich PDF reports containing the full AI analysis for any prediction.
 
 ---
 
@@ -31,14 +32,14 @@ internguard-pro/
 ├── app/                          # Next.js Frontend
 │   ├── analyze/                  # Job description input page
 │   ├── dashboard/                # Analytics & company verification
-│   ├── result/                   # Analysis result display
+│   ├── result/                   # Analysis result & Live Chatbox
 │   └── api/                      # Frontend proxies to FastAPI
 ├── components/                   # Reusable React components
 └── backend/                      # FastAPI Python Application
-    ├── main.py                   # Route definitions
+    ├── main.py                   # API routes (Predict, Chat, Dashboard, PDF)
     ├── database.py               # SQLAlchemy async models
     ├── schema.sql                # PostgreSQL definitions
-    └── ml/                       # Machine Learning logic & scripts
+    └── ml/                       # Machine Learning & Ollama integration
 ```
 
 ---
@@ -50,6 +51,7 @@ internguard-pro/
 - **Node.js** (v18+)
 - **Python** (v3.10+)
 - **PostgreSQL** (v14+)
+- **Ollama**: Installed locally with the `llama3` model pulled (`ollama run llama3`).
 
 ### 1. Database Setup
 
@@ -62,7 +64,7 @@ psql -U postgres -d internguard -f backend/schema.sql
 
 > **Note:** The default setup connects to `postgresql+asyncpg://postgres:Admin-14@localhost:5432/internguard`. Update your `DATABASE_URL` environment variables if your username/password differs.
 
-### 2. Backend Setup (FastAPI & ML)
+### 2. Backend Setup (FastAPI, ML, & Ollama)
 
 Create your virtual environment, install dependencies, and train the initial model:
 
@@ -72,7 +74,10 @@ python -m venv venv
 venv\Scripts\activate
 pip install -r requirements.txt
 
-# Train the ML Model
+# Ensure Ollama is running in the background
+# ollama run llama3
+
+# Train the ML Model on the expanded dataset
 python -m ml.train
 
 # Start the Backend Server
@@ -95,8 +100,9 @@ Visit [`http://localhost:3000`](http://localhost:3000) in your browser!
 
 ## 📡 Core API Endpoints
 
-### Predictions & Feedback
-- `POST /predict`: Submit job text for scam risk classification.
+### Predictions & AI Chat
+- `POST /predict`: Submit job text. Triggers the Hybrid ML + Ollama pipeline for scam risk classification.
+- `POST /chat`: Interactive endpoint to chat with Ollama regarding a specific job posting.
 - `POST /feedback`: Contribute user feedback regarding prediction accuracy.
 - `GET  /dashboard/report/{prediction_id}`: Export highly-styled **PDF Reports** for a single prediction.
 
@@ -115,18 +121,22 @@ Visit [`http://localhost:3000`](http://localhost:3000) in your browser!
 |---|---|
 | `job_posts` | Retains raw text, source, and timestamps of all processed posts. |
 | `scam_reports` | Maintains manual reports from users flagging certain posts as scams. |
-| `predictions` | Stores exact model probabilities, matched keyword arrays, risk scores, and admin marks. |
+| `predictions` | Stores exact probabilities, risk scores, Ollama explanations, AI-identified red flags, and admin marks. |
 | `companies` | A dedicated platform registry to catalog companies and `is_verified` standing. |
 | `user_feedback` | Stores crowd-sourced feedback to aid future ML iterations. |
 
 ---
 
-## 🤖 ML Model Insights
+## 🤖 AI & ML Model Insights
 
-InternGuard Pro relies on a tuned **Logistic Regression** classifier:
-- **Feature Extraction**: TF-IDF vectors processing essential unigrams & bigrams.
-- **Rule-based Additions**: Checks for exactly 30+ highly-effective binary scam flags (e.g., `"registration fee"`, `"whatsapp only"`).
-- **Heuristics**: Tracks excessive capitalization, exclamation counts, and specific currency constraints.
+InternGuard Pro relies on a state-of-the-art **Hybrid Engine**:
+1. **Random Forest Classifier**: 
+   - **Feature Extraction**: TF-IDF vectors processing essential unigrams & bigrams.
+   - **Rule-based Additions**: Checks for 50+ highly-effective binary scam flags (e.g., `"crypto investment"`, `"wire transfer"`, `"multi-level marketing"`).
+2. **Local LLM (Ollama / Llama 3)**:
+   - Evaluates the job description semantically to catch sophisticated, modern scams that bypass keyword filters.
+   - Generates human-readable explanations and actionable live suggestions for the user.
+3. **Probability Blending**: The system fuses the predictions from both models (50/50 split) to produce an incredibly accurate, robust confidence score.
 
 ## 📜 License
 
